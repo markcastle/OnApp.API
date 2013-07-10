@@ -1,15 +1,12 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Linq;
 using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 using RestSharp;
-using OnApp.API;
 
 namespace OnApp.API.Models
 {
-
     public class VirtualMachine
     {
         [JsonProperty("add_to_marketplace")]
@@ -52,7 +49,6 @@ namespace OnApp.API.Models
         public object EdgeServerType { get; set; }
 
         [JsonProperty("enable_autoscale")]
-       // [JsonConverter(typeof(BoolConverter))]
         public string EnableAutoscale { get; set; }
 
         [JsonProperty("enable_monitis")]
@@ -149,7 +145,7 @@ namespace OnApp.API.Models
         public object XenId { get; set; }
 
         [JsonProperty("ip_addresses")]
-        public VirtualServerIp[] IpAddresses { get; set; }
+        public IpAddressContainer[] IpAddresses { get; set; }
 
         [JsonProperty("monthly_bandwidth_used")]
         public string MonthlyBandwidthUsed { get; set; }
@@ -157,12 +153,8 @@ namespace OnApp.API.Models
         [JsonProperty("total_disk_size")]
         public int TotalDiskSize { get; set; }
 
-        /* Just added */
-
-
         [JsonProperty("initial_root_password_encryption_key")]
         public string InitialRootPasswordEncryptionKey { get; set; }
-
 
         [JsonProperty("licensing_server_id")]
         public string LicensingServerId { get; set; }
@@ -233,114 +225,116 @@ namespace OnApp.API.Models
                     Resource = "virtual_machines.json"
                 };
 
-            var model = Client.Instance.RestExecute<List<Models>>(request);
+            var model = Client.Instance.RestExecute<List<VirtualMachineContainer>>(request);
             return model.Select(vm => vm.VirtualMachine).ToList();
         }
 
 
         public VirtualMachine Get(int id)
-        {   
+        {
             var request = new RestRequest
-            {
-                Method = Method.GET,
-                RequestFormat = DataFormat.Json,
-                Resource = "/virtual_machines/" + id + ".json"
-            };
-            
-            var model = Client.Instance.RestExecute<Models>(request);
+                {
+                    Method = Method.GET,
+                    RequestFormat = DataFormat.Json,
+                    Resource = "/virtual_machines/" + id + ".json"
+                };
+
+            var model = Client.Instance.RestExecute<VirtualMachineContainer>(request);
             return model.VirtualMachine;
         }
 
 
         public void StartUp()
         {
-            var request = new RestRequest
+            if (!this.Booted)
             {
-                Method = Method.POST,
-                RequestFormat = DataFormat.Json,
-                Resource = "/virtual_machines/" + this.Id + "/startup.json"
-            };
+                var request = new RestRequest
+                    {
+                        Method = Method.POST,
+                        RequestFormat = DataFormat.Json,
+                        Resource = "/virtual_machines/" + Id + "/startup.json"
+                    };
 
-
-            Client.Instance.Execute(request);
-       
+                Client.Instance.Execute(request); 
+            }
         }
+
+
 
         public void Shutdown()
         {
+            if (this.Booted)
+            {
+                var request = new RestRequest
+                    {
+                        Method = Method.POST,
+                        RequestFormat = DataFormat.Json,
+                        Resource = "/virtual_machines/" + Id + "/shutdown.json"
+                    };
 
-            var request = new RestRequest
-                {
-                    Method = Method.POST,
-                    RequestFormat = DataFormat.Json,
-                    Resource = "/virtual_machines/" + this.Id + "/shutdown.json"
-                };
 
-
-            Client.Instance.Execute(request);
-            
+                Client.Instance.Execute(request);
+            }
         }
 
         public void Reboot()
         {
-            var request = new RestRequest
+            if(this.Booted)
             {
-                Method = Method.POST,
-                RequestFormat = DataFormat.Json,
-                Resource = "/virtual_machines/" + this.Id + "/reboot.json"
-            };
+                var request = new RestRequest
+                    {
+                        Method = Method.POST,
+                        RequestFormat = DataFormat.Json,
+                        Resource = "/virtual_machines/" + Id + "/reboot.json"
+                    };
 
 
-            Client.Instance.Execute(request);
-            
+                Client.Instance.Execute(request);
+            }
         }
 
 
         public void Delete()
         {
-            //http://onapp.test/virtual_machines/:id.json?convert_last_backup=1&destroy_all_backups=1
-
+            
             var request = new RestRequest
-            {
-                Method = Method.DELETE,
-                RequestFormat = DataFormat.Json,
-                Resource = "/virtual_machines/" + this.Id 
-            };
+                {
+                    Method = Method.DELETE,
+                    RequestFormat = DataFormat.Json,
+                    Resource = "/virtual_machines/" + Id
+                };
 
             request.AddParameter("convert_last_backup", "1");
             request.AddParameter("destroy_all_backups", "1");
 
 
             Client.Instance.Execute(request);
-        
         }
 
 
         public VirtualMachine Create()
         {
             var request = new RestRequest
-            {
-                Method = Method.POST,
-                RequestFormat = DataFormat.Json,
-                Resource = "virtual_machines.json",
+                {
+                    Method = Method.POST,
+                    RequestFormat = DataFormat.Json,
+                    Resource = "virtual_machines.json",
+                };
 
 
-            };
+            var model = new VirtualMachineContainer {VirtualMachine = this};
 
-
-            var model = new Models();
-            model.VirtualMachine = this;
-
-            var json = JsonConvert.SerializeObject(model, new JsonSerializerSettings { NullValueHandling = NullValueHandling.Ignore });
+            var json = JsonConvert.SerializeObject(model, new JsonSerializerSettings{NullValueHandling = NullValueHandling.Ignore});
             request.AddParameter("application/json; charset=utf-8", json, ParameterType.RequestBody);
+            var machine = Client.Instance.RestExecute<VirtualMachineContainer>(request);
 
-
-            var result = Client.Instance.RestExecute<Models>(request);
-
-            return result.VirtualMachine;
-
+            return machine.VirtualMachine;
         }
-
     }
 
+    public class VirtualMachineContainer
+    {
+        [JsonProperty("virtual_machine")]
+        public VirtualMachine VirtualMachine { get; set; }
+    }
 }

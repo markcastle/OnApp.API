@@ -1,20 +1,16 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using Newtonsoft.Json;
 using RestSharp;
-using Newtonsoft.Json;
 
 namespace OnApp.API
 {
     public class Client
     {
+        private static readonly object Mutex = new object();
+        private static volatile Client _instance;
 
-        private static readonly object _mutex = new object();
-        private static volatile Client _instance = null;
-        private Client() { }
-
+        private Client()
+        {
+        }
 
 
         public static Client Instance
@@ -23,7 +19,7 @@ namespace OnApp.API
             {
                 if (_instance == null)
                 {
-                    lock (_mutex)
+                    lock (Mutex)
                     {
                         if (_instance == null)
                         {
@@ -40,38 +36,35 @@ namespace OnApp.API
         public string Host { get; set; }
 
 
-    
-
         public T RestExecute<T>(RestRequest request) where T : new()
         {
             var client = new RestClient {BaseUrl = Host, Authenticator = new HttpBasicAuthenticator(Username, Password)};
 
-            var response = client.Execute(request);
+            IRestResponse response = client.Execute(request);
 
-            var json = response.Content;
-          
+            string json = response.Content;
 
-            return (T)JsonConvert.DeserializeObject<T>(json);
+
+            return JsonConvert.DeserializeObject<T>(json);
+        }
+
+        public string ExecuteResponse<T>(RestRequest request) where T : new()
+        {
+            var client = new RestClient {BaseUrl = Host, Authenticator = new HttpBasicAuthenticator(Username, Password)};
+
+            IRestResponse response = client.Execute(request);
+
+            return response.Content;
         }
 
 
         public void Execute(RestRequest request)
         {
-            var client = new RestClient { BaseUrl = Host, Authenticator = new HttpBasicAuthenticator(Username, Password) };
+            var client = new RestClient {BaseUrl = Host, Authenticator = new HttpBasicAuthenticator(Username, Password)};
 
-            var response = client.Execute(request);
+            IRestResponse response = client.Execute(request);
 
-            var json = response.Content;
+            string json = response.Content;
         }
-
-        public string ExecuteResponse<T>(RestRequest request) where T : new()
-        {
-            var client = new RestClient { BaseUrl = Host, Authenticator = new HttpBasicAuthenticator(Username, Password) };
-
-            var response = client.Execute(request);
-
-           return response.Content;
-        }
-
     }
 }

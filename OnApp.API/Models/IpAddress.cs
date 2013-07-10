@@ -1,15 +1,9 @@
-﻿
-using System;
-using System.Collections.Generic;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
+﻿using Newtonsoft.Json;
 
 namespace OnApp.API.Models
 {
-
     public class IpAddress
     {
-
         [JsonProperty("address")]
         public string Address { get; set; }
 
@@ -57,6 +51,13 @@ namespace OnApp.API.Models
 
         [JsonProperty("netmask")]
         public string Netmask { get; set; }
+    }
+
+
+    public class IpAddressContainer
+    {
+        [JsonProperty("ip_address")]
+        public IpAddress IpAddress { get; set; }
     }
 
 }
