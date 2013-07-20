@@ -50,3 +50,4 @@ Supported Methods
 * Transactions
 * Network
 
+Visit my blog for more <a href="http://morten.io/onapp-api-net-wrapper/">samples</a>
